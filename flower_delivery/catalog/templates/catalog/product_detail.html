@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="row g-5">
+        <div class="col-md-6">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" class="img-fluid rounded-3 shadow" alt="{{ product.name }}">
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <h1 class="mb-4">{{ product.name }}</h1>
+            <div class="d-flex align-items-center mb-4">
+                <span class="h3 text-primary me-3">{{ product.price }} ₽</span>
+                {% if product.available %}
+                <span class="badge bg-success fs-6">В наличии</span>
+                {% else %}
+                <span class="badge bg-danger fs-6">Нет в наличии</span>
+                {% endif %}
+            </div>
+            <p class="lead">{{ product.description }}</p>
+            <div class="d-grid gap-2 d-md-block">
+                <a href="{% url 'orders:order_create' %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-cart me-2"></i>Заказать
+                </a>
+                <!-- Исправленная ссылка -->
+                <a href="{% url 'catalog:product_list' %}" class="btn btn-outline-secondary btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Назад
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
