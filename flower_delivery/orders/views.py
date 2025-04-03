@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from .models import Order, OrderItem
+from catalog.models import Product
 from .forms import OrderForm
 from bot.telegram import send_telegram_notification
 
@@ -13,20 +14,22 @@ def order_create(request):
             order.user = request.user
             order.save()
 
-            # Сохраняем товары с ценами
-            for product in form.cleaned_data['products']:
-                OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    price=product.price,
-                    quantity=1
-                )
+            for field_name, value in form.cleaned_data.items():
+                if field_name.startswith('quantity_'):
+                    product_id = field_name.split('_')[1]
+                    product = Product.objects.get(id=product_id)
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product,
+                        price=product.price,
+                        quantity=value
+                    )
 
             send_telegram_notification(order)
+
             return redirect('orders:order_list')
     else:
         form = OrderForm(user=request.user)
-
     return render(request, 'orders/order_create.html', {'form': form})
 
 @login_required

@@ -3,39 +3,35 @@ from .models import Order
 from catalog.models import Product
 
 class OrderForm(forms.ModelForm):
-    """Форма для создания заказа."""
-    products = forms.ModelMultipleChoiceField(
-        queryset=Product.objects.filter(available=True),
-        widget=forms.CheckboxSelectMultiple,
-        required=True
-    )
-
     class Meta:
         model = Order
-        fields = ['delivery_address', 'delivery_time', 'comment']  # Добавили комментарий
+        fields = ['delivery_address', 'delivery_time', 'comment']
         widgets = {
-            'delivery_time': forms.DateTimeInput(attrs={
-                'type': 'datetime-local',
-                'class': 'form-control'
-            }),
             'delivery_address': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Введите полный адрес доставки'
             }),
+            'delivery_time': forms.DateTimeInput(attrs={
+                'class': 'form-control datetimepicker',
+                'type': 'datetime-local'
+            }),
             'comment': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Дополнительные пожелания к заказу...'
+                'placeholder': 'Дополнительные пожелания...'
             })
-        }
-        labels = {
-            'delivery_address': 'Адрес доставки',
-            'delivery_time': 'Дата и время доставки',
-            'comment': 'Комментарий к заказу'  # Добавили метку
         }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
+
         if user:
-            self.fields['products'].queryset = Product.objects.filter(available=True)
+            products = Product.objects.filter(available=True)
+            for product in products:
+                self.fields[f'quantity_{product.id}'] = forms.IntegerField(
+                    min_value=1,
+                    initial=1,
+                    label=product.name,
+                    widget=forms.NumberInput(attrs={'class': 'form-control'})
+                )

@@ -1,49 +1,31 @@
 {% extends "base.html" %}
+
 {% block title %}Мои заказы{% endblock %}
+
 {% block content %}
-<div class="container my-5">
-    <h1 class="mb-4"><i class="bi bi-list-check me-2"></i>Мои заказы</h1>
-    
-    {% if orders %}
-    <div class="list-group">
-        {% for order in orders %}
-        <div class="list-group-item mb-3 shadow-sm">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-1">Заказ №{{ order.id }}</h5>
-                    <small class="text-muted">{{ order.created_at|date:"d.m.Y H:i" }}</small>
-                </div>
-                <span class="badge bg-primary rounded-pill">{{ order.products.count }} шт.</span>
-            </div>
-            
-            <div class="mt-3">
-                <div class="row">
-                    <div class="col-md-6">
-                        <p class="mb-1"><strong>Адрес:</strong> {{ order.delivery_address }}</p>
-                        <p class="mb-0"><strong>Дата доставки:</strong> {{ order.delivery_time|date:"d.m.Y H:i" }}</p>
-                        {% if order.comment %}  <!-- Добавили блок с комментарием -->
-                        <p class="mt-2 text-muted"><strong>Комментарий:</strong> {{ order.comment }}</p>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <ul class="list-group list-group-flush">
-                            {% for item in order.order_items.all %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ item.product.name }}
-                                <span class="badge bg-secondary rounded-pill">{{ item.quantity }} шт.</span>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    </div>
+<h2 class="mb-4">Мои заказы</h2>
+<div class="row">
+    {% for order in orders %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Заказ №{{ order.id }}</h5>
+                    <p class="card-text"><strong>Адрес:</strong> {{ order.address }}</p>
+                    <p class="card-text"><strong>Дата доставки:</strong> {{ order.delivery_time }}</p>
+                    <p class="card-text"><strong>Дата создания:</strong> {{ order.created_at }}</p>
+                    <p class="card-text"><strong>Товары:</strong></p>
+                    <ul>
+                        {% for product in order.products.all %}
+                            <li>{{ product.name }} - {{ product.price }} руб.</li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
         </div>
-        {% endfor %}
-    </div>
-    {% else %}
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle me-2"></i>У вас пока нет заказов
-    </div>
-    {% endif %}
+    {% empty %}
+        <div class="alert alert-warning" role="alert">
+            У вас пока нет заказов.
+        </div>
+    {% endfor %}
 </div>
 {% endblock %}

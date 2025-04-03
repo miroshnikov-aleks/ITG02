@@ -2,11 +2,11 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+import asyncio
+from django.utils.asyncio import async_unsafe
 
-# Правильное определение базовой директории
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Загрузка .env файла
 env_path = BASE_DIR / '.env'
 load_dotenv(env_path)
 
@@ -101,7 +101,8 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Настройки аутентификации
 LOGIN_URL = 'users:login'
 LOGIN_REDIRECT_URL = 'catalog:product_list'
 LOGOUT_REDIRECT_URL = 'catalog:product_list'
+
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
