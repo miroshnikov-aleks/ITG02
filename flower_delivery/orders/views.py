@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Order, OrderItem
 from catalog.models import Product
@@ -36,3 +36,23 @@ def order_create(request):
 def order_list(request):
     orders = Order.objects.filter(user=request.user).prefetch_related('items')
     return render(request, 'orders/order_list.html', {'orders': orders})
+
+@login_required
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    return render(request, 'orders/order_detail.html', {'order': order})
+
+@login_required
+def update_order_status(request, order_id):
+    if not request.user.is_staff:
+        return redirect('orders:order_list')
+
+    order = get_object_or_404(Order, id=order_id)
+    if request.method == 'POST':
+        status = request.POST.get('status')
+        if status in dict(Order.STATUS_CHOICES):
+            order.status = status
+            order.save()
+            return redirect('orders:order_list')
+
+    return render(request, 'orders/update_order_status.html', {'order': order})

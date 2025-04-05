@@ -10,15 +10,20 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title">Заказ №{{ order.id }}</h5>
-                    <p class="card-text"><strong>Адрес:</strong> {{ order.address }}</p>
+                    <p class="card-text"><strong>Адрес:</strong> {{ order.delivery_address }}</p>
                     <p class="card-text"><strong>Дата доставки:</strong> {{ order.delivery_time }}</p>
                     <p class="card-text"><strong>Дата создания:</strong> {{ order.created_at }}</p>
+                    <p class="card-text"><strong>Статус:</strong> {{ order.get_status_display }}</p>
                     <p class="card-text"><strong>Товары:</strong></p>
                     <ul>
-                        {% for product in order.products.all %}
-                            <li>{{ product.name }} - {{ product.price }} руб.</li>
+                        {% for item in order.items.all %}
+                            <li>{{ item.product.name }} - {{ item.quantity }} шт. - {{ item.price }} руб.</li>
                         {% endfor %}
                     </ul>
+                    <a href="{% url 'orders:order_detail' order.id %}" class="btn btn-primary">Подробнее</a>
+                    {% if request.user.is_staff %}
+                        <a href="{% url 'orders:update_order_status' order.id %}" class="btn btn-secondary">Изменить статус</a>
+                    {% endif %}
                 </div>
             </div>
         </div>
