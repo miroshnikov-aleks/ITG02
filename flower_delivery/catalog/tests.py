@@ -12,14 +12,14 @@ class CatalogViewsTests(TestCase):
             description="Красные розы 50 см",
             available=True
         )
-        
+
         cls.available_product2 = Product.objects.create(
             name="Тюльпаны белые",
             price=800.00,
             description="Белые тюльпаны",
             available=True
         )
-        
+
         cls.unavailable_product = Product.objects.create(
             name="Орхидеи фиолетовые",
             price=2500.00,
@@ -43,7 +43,7 @@ class CatalogViewsTests(TestCase):
             [self.available_product1, self.available_product2],
             ordered=False
         )
-        
+
     def test_product_list_content(self):
         response = self.client.get(reverse('catalog:product_list'))
         # Исправлено ожидание формата цены с учетом локализации
@@ -51,10 +51,10 @@ class CatalogViewsTests(TestCase):
         self.assertContains(response, self.available_product2.name)
         self.assertContains(response, "1500,00 ₽")  # Запятая вместо точки
         self.assertContains(response, "800,00 ₽")    # Запятая вместо точки
-        
+
         # Проверка отсутствия недоступного товара
         self.assertNotContains(response, self.unavailable_product.name)
-        
+
     def test_empty_product_list(self):
         Product.objects.all().delete()
         response = self.client.get(reverse('catalog:product_list'))

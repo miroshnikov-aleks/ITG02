@@ -24,6 +24,7 @@
                     {% if request.user.is_staff %}
                         <a href="{% url 'orders:update_order_status' order.id %}" class="btn btn-secondary">Изменить статус</a>
                     {% endif %}
+                    <a href="{% url 'orders:reorder' order.id %}" class="btn btn-success">Повторить заказ</a>
                 </div>
             </div>
         </div>

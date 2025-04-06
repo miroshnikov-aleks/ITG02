@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Отзывы на {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4">Отзывы на {{ product.name }}</h2>
+    {% if reviews %}
+        <div class="list-group">
+            {% for review in reviews %}
+                <div class="list-group-item">
+                    <h5 class="mb-1">{{ review.user.username }}</h5>
+                    <p class="mb-1">Рейтинг: {{ review.rating }}/5</p>
+                    <p class="mb-1">{{ review.comment }}</p>
+                    <small class="text-muted">{{ review.created_at }}</small>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Отзывов пока нет.</p>
+    {% endif %}
+    <a href="{% url 'reviews:review_create' product.pk %}" class="btn btn-primary mt-3">
+        <i class="bi bi-star me-2"></i>Оставить отзыв
+    </a>
+</div>
+{% endblock %}

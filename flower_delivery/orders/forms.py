@@ -24,14 +24,20 @@ class OrderForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
+        reorder_data = kwargs.pop('reorder_data', None)
         super().__init__(*args, **kwargs)
 
         if user:
             products = Product.objects.filter(available=True)
             for product in products:
+                initial_quantity = 0
+                if reorder_data:
+                    order_item = reorder_data.items.filter(product=product).first()
+                    if order_item:
+                        initial_quantity = order_item.quantity
                 self.fields[f'quantity_{product.id}'] = forms.IntegerField(
-                    min_value=1,
-                    initial=1,
+                    min_value=0,
+                    initial=initial_quantity,
                     label=product.name,
                     widget=forms.NumberInput(attrs={'class': 'form-control'})
                 )

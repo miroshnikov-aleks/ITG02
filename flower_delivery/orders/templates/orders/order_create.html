@@ -14,7 +14,7 @@
                 <div class="card-body">
                     <form method="post" novalidate>
                         {% csrf_token %}
-                        
+
                         <!-- Основные поля -->
                         <div class="mb-3">
                             {{ form.delivery_address|as_crispy_field }}

@@ -23,9 +23,13 @@
                 <a href="{% url 'orders:order_create' %}" class="btn btn-primary btn-lg">
                     <i class="bi bi-cart me-2"></i>Заказать
                 </a>
-                <!-- Исправленная ссылка -->
                 <a href="{% url 'catalog:product_list' %}" class="btn btn-outline-secondary btn-lg">
                     <i class="bi bi-arrow-left me-2"></i>Назад
+                </a>
+            </div>
+            <div class="mt-4">
+                <a href="{% url 'reviews:review_list' product.pk %}" class="btn btn-link">
+                    <i class="bi bi-star me-2"></i>Посмотреть отзывы ({{ product.reviews.count }})
                 </a>
             </div>
         </div>

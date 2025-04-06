@@ -57,3 +57,19 @@ class OrderTestCase(TestCase):
     def test_order_item_total_price(self):
         # Проверяем, что общая стоимость товара в заказе рассчитывается правильно
         self.assertEqual(self.order_item.total_price, 200.00)
+
+    def test_reorder(self):
+        # Проверяем возможность повторного заказа
+        self.client.login(username='testuser', password='testpass')
+        response = self.client.post(f'/orders/reorder/{self.order.id}/', {
+            'delivery_address': 'Новый адрес',
+            'delivery_time': (timezone.now() + timezone.timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M'),
+            'comment': 'Новый комментарий',
+            f'quantity_{self.product.id}': 2  # Указываем количество товара
+        })
+        self.assertEqual(response.status_code, 302)
+        new_order = Order.objects.latest('id')
+        self.assertEqual(new_order.delivery_address, 'Новый адрес')
+        self.assertEqual(new_order.items.count(), 1)
+        self.assertEqual(new_order.items.first().product, self.product)
+        self.assertEqual(new_order.items.first().quantity, 2)
