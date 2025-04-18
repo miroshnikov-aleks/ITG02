@@ -34,16 +34,6 @@
             background-color: rgba(255,255,255,0.1);
             transform: translateY(-2px);
         }
-        .dropdown-menu-custom {
-            background-color: var(--main-color);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .dropdown-item-custom {
-            color: var(--light-color) !important;
-        }
-        .dropdown-item-custom:hover {
-            background-color: var(--accent-color) !important;
-        }
         .brand-custom {
             font-family: 'Arial', sans-serif;
             font-weight: 700;
@@ -115,6 +105,13 @@
                             <i class="bi bi-list-check me-1"></i>Мои заказы
                         </a>
                     </li>
+                    {% if user.is_authenticated and user.is_staff %}
+                        <li class="nav-item">
+                            <a class="nav-link nav-link-custom" href="{% url 'analytics:daily_report_list' %}">
+                                <i class="bi bi-bar-chart me-1"></i>Отчёты
+                            </a>
+                        </li>
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}

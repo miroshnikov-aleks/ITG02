@@ -38,22 +38,10 @@ class Order(models.Model):
         return sum(item.total_price for item in self.items.all())
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(
-        Order,
-        on_delete=models.CASCADE,
-        related_name='items'
-    )
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.PROTECT,
-        related_name='order_items'
-    )
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='order_items')
     quantity = models.PositiveIntegerField('Количество', default=1)
-    price = models.DecimalField(
-        'Цена',
-        max_digits=10,
-        decimal_places=2
-    )
+    price = models.DecimalField('Цена', max_digits=10, decimal_places=2)
 
     class Meta:
         unique_together = ['order', 'product']

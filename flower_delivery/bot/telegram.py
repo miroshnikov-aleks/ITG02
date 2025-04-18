@@ -9,6 +9,7 @@ from django.conf import settings
 from django.utils import timezone
 from asgiref.sync import sync_to_async, async_to_sync
 from orders.models import OrderItem
+from analytics.models import DailyReport
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +36,32 @@ async def async_send_telegram_notification(order):
                 parse_mode=ParseMode.HTML
             )
 
+        # Отправка уведомления о статусе заказа
+        status_message = f"📦 Статус заказа №{order.id}: {order.get_status_display()}"
+        await bot.send_message(
+            chat_id=settings.TELEGRAM_CHAT_ID,
+            text=status_message,
+            parse_mode=ParseMode.HTML
+        )
+
     except Exception as e:
         logger.error(f"Telegram notification error: {str(e)}", exc_info=True)
         raise
     finally:
         await bot.session.close()
+
+async def send_daily_report():
+    today = timezone.now().date()
+    report = DailyReport.objects.filter(date=today).first()
+    if report:
+        message_text = f"📊 Ежедневный отчёт за {today}:\n"
+        message_text += f"📦 Количество заказов: {report.order_count}\n"
+        message_text += f"💰 Общая выручка: {report.total_revenue} ₽"
+        await bot.send_message(
+            chat_id=settings.TELEGRAM_CHAT_ID,
+            text=message_text,
+            parse_mode=ParseMode.HTML
+        )
 
 @sync_to_async
 def generate_order_message(order):

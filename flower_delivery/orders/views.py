@@ -1,9 +1,19 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from .models import Order, OrderItem
 from catalog.models import Product
 from .forms import OrderForm
 from bot.telegram import send_telegram_notification
+from analytics.models import DailyReport
+from decimal import Decimal
+
+def update_daily_report(order):
+    today = timezone.now().date()
+    report, created = DailyReport.objects.get_or_create(date=today)
+    report.order_count += 1
+    report.total_revenue += Decimal(order.total_price)
+    report.save()
 
 @login_required
 def order_create(request):
@@ -25,6 +35,7 @@ def order_create(request):
                         quantity=value
                     )
 
+            update_daily_report(order)
             send_telegram_notification(order)
 
             return redirect('orders:order_list')
@@ -53,6 +64,7 @@ def update_order_status(request, order_id):
         if status in dict(Order.STATUS_CHOICES):
             order.status = status
             order.save()
+            send_telegram_notification(order)  # Отправка уведомления при изменении статуса
             return redirect('orders:order_list')
 
     return render(request, 'orders/update_order_status.html', {'order': order})
@@ -78,6 +90,7 @@ def reorder(request, order_id):
                         quantity=value
                     )
 
+            update_daily_report(new_order)
             send_telegram_notification(new_order)
 
             return redirect('orders:order_list')
