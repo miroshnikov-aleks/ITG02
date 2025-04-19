@@ -1,18 +1,17 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils import timezone
 from .models import Order, OrderItem
 from catalog.models import Product
 from .forms import OrderForm
 from bot.telegram import send_telegram_notification
 from analytics.models import DailyReport
-from decimal import Decimal
 
 def update_daily_report(order):
     today = timezone.now().date()
     report, created = DailyReport.objects.get_or_create(date=today)
     report.order_count += 1
-    report.total_revenue += Decimal(order.total_price)
+    report.total_revenue += order.total_price
     report.save()
 
 @login_required
@@ -50,7 +49,9 @@ def order_list(request):
 
 @login_required
 def order_detail(request, order_id):
-    order = get_object_or_404(Order, id=order_id, user=request.user)
+    order = get_object_or_404(Order, id=order_id)
+    if not request.user.is_staff and order.user != request.user:
+        raise PermissionDenied("У вас нет доступа к этому заказу.")
     return render(request, 'orders/order_detail.html', {'order': order})
 
 @login_required
@@ -64,8 +65,8 @@ def update_order_status(request, order_id):
         if status in dict(Order.STATUS_CHOICES):
             order.status = status
             order.save()
-            send_telegram_notification(order)  # Отправка уведомления при изменении статуса
-            return redirect('orders:order_list')
+            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
+            return redirect('orders:all_orders')
 
     return render(request, 'orders/update_order_status.html', {'order': order})
 
@@ -102,3 +103,8 @@ def reorder(request, order_id):
         }
         form = OrderForm(initial=initial_data, user=request.user, reorder_data=original_order)
     return render(request, 'orders/order_create.html', {'form': form, 'reorder': True})
+
+@user_passes_test(lambda u: u.is_staff)
+def all_orders(request):
+    orders = Order.objects.all().prefetch_related('items')
+    return render(request, 'orders/all_orders.html', {'orders': orders})

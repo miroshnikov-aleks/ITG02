@@ -6,6 +6,7 @@
 <h2 class="mb-4">Детали заказа №{{ order.id }}</h2>
 <div class="card">
     <div class="card-body">
+        <p class="card-text"><strong>Пользователь:</strong> {{ order.user.username }}</p>
         <p class="card-text"><strong>Адрес:</strong> {{ order.delivery_address }}</p>
         <p class="card-text"><strong>Дата доставки:</strong> {{ order.delivery_time }}</p>
         <p class="card-text"><strong>Дата создания:</strong> {{ order.created_at }}</p>
@@ -17,7 +18,11 @@
             {% endfor %}
         </ul>
         <p class="card-text"><strong>Итого:</strong> {{ order.total_price }} руб.</p>
-        <a href="{% url 'orders:order_list' %}" class="btn btn-primary">Назад к списку заказов</a>
+        {% if request.user.is_staff %}
+            <a href="{% url 'orders:all_orders' %}" class="btn btn-primary">Назад к списку заказов</a>
+        {% else %}
+            <a href="{% url 'orders:order_list' %}" class="btn btn-primary">Назад к списку заказов</a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

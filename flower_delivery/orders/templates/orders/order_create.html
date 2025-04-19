@@ -14,8 +14,6 @@
                 <div class="card-body">
                     <form method="post" novalidate>
                         {% csrf_token %}
-
-                        <!-- Основные поля -->
                         <div class="mb-3">
                             {{ form.delivery_address|as_crispy_field }}
                         </div>
@@ -25,8 +23,6 @@
                         <div class="mb-3">
                             {{ form.comment|as_crispy_field }}
                         </div>
-
-                        <!-- Поля с товарами -->
                         <div class="product-list mb-4">
                             {% for field in form %}
                                 {% if 'quantity_' in field.name %}
@@ -39,7 +35,6 @@
                                 {% endif %}
                             {% endfor %}
                         </div>
-
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary btn-lg">
                                 <i class="bi bi-check2-circle me-2"></i>Подтвердить заказ

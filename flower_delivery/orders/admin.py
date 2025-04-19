@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Order, OrderItem
+from bot.telegram import send_telegram_notification
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -16,18 +17,26 @@ class OrderAdmin(admin.ModelAdmin):
 
     def mark_as_in_progress(self, request, queryset):
         queryset.update(status='in_progress')
+        for order in queryset:
+            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
     mark_as_in_progress.short_description = "Отметить как в обработке"
 
     def mark_as_in_delivery(self, request, queryset):
         queryset.update(status='in_delivery')
+        for order in queryset:
+            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
     mark_as_in_delivery.short_description = "Отметить как в доставке"
 
     def mark_as_completed(self, request, queryset):
         queryset.update(status='completed')
+        for order in queryset:
+            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
     mark_as_completed.short_description = "Отметить как выполнен"
 
     def mark_as_canceled(self, request, queryset):
         queryset.update(status='canceled')
+        for order in queryset:
+            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
     mark_as_canceled.short_description = "Отметить как отменен"
 
     def delete_selected_orders(self, request, queryset):

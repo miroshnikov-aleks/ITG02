@@ -36,14 +36,6 @@ async def async_send_telegram_notification(order):
                 parse_mode=ParseMode.HTML
             )
 
-        # Отправка уведомления о статусе заказа
-        status_message = f"📦 Статус заказа №{order.id}: {order.get_status_display()}"
-        await bot.send_message(
-            chat_id=settings.TELEGRAM_CHAT_ID,
-            text=status_message,
-            parse_mode=ParseMode.HTML
-        )
-
     except Exception as e:
         logger.error(f"Telegram notification error: {str(e)}", exc_info=True)
         raise
@@ -72,7 +64,7 @@ def generate_order_message(order):
     delivery_time = timezone.localtime(order.delivery_time, moscow_tz)
 
     message = [
-        f"🌸 {hbold('НОВЫЙ ЗАКАЗ ЦВЕТОВ')} 🌸\n",
+        f"🌸 {hbold('ИЗМЕНЕНИЕ СТАТУСА ЗАКАЗА')} 🌸\n",
         f"📦 {hbold('Детали заказа:')}",
         f"🆔 Номер: {order.id}",
         f"📅 Дата: {created_at.strftime('%d.%m.%Y %H:%M')}",
@@ -86,6 +78,7 @@ def generate_order_message(order):
         message.append(f"➖ {item.product.name} ({item.quantity} шт.) - {item.price}₽")
 
     message.append(f"\n💰 {hbold('ИТОГО:')} {order.total_price}₽")
+    message.append(f"\n📦 {hbold('Статус заказа:')} {order.get_status_display()}")
     return '\n'.join(message)
 
 @sync_to_async

@@ -8,14 +8,12 @@ from unittest.mock import patch
 
 class OrderTestCase(TestCase):
     def setUp(self):
-        # Создаем пользователя
         self.user = get_user_model().objects.create_user(
             username='testuser',
             email='testuser@example.com',
             password='testpass'
         )
 
-        # Создаем продукт
         self.product = Product.objects.create(
             name='Роза',
             price=100.00,
@@ -23,7 +21,6 @@ class OrderTestCase(TestCase):
             available=True
         )
 
-        # Создаем заказ
         self.order = Order.objects.create(
             user=self.user,
             delivery_address='Москва, ул. Пушкина, д. 10',
@@ -31,7 +28,6 @@ class OrderTestCase(TestCase):
             status='new'
         )
 
-        # Добавляем товар в заказ
         self.order_item = OrderItem.objects.create(
             order=self.order,
             product=self.product,
@@ -40,7 +36,6 @@ class OrderTestCase(TestCase):
         )
 
     def test_order_creation(self):
-        # Проверяем, что заказ создан корректно
         self.assertEqual(self.order.user, self.user)
         self.assertEqual(self.order.status, 'new')
         self.assertEqual(self.order.items.count(), 1)
@@ -48,24 +43,19 @@ class OrderTestCase(TestCase):
 
     @patch('bot.telegram.async_send_telegram_notification')
     def test_send_telegram_notification(self, mock_send_notification):
-        # Вызываем функцию отправки уведомления
         send_telegram_notification(self.order)
-
-        # Проверяем, что функция была вызвана с правильными аргументами
         mock_send_notification.assert_called_once_with(self.order)
 
     def test_order_item_total_price(self):
-        # Проверяем, что общая стоимость товара в заказе рассчитывается правильно
         self.assertEqual(self.order_item.total_price, 200.00)
 
     def test_reorder(self):
-        # Проверяем возможность повторного заказа
         self.client.login(username='testuser', password='testpass')
         response = self.client.post(f'/orders/reorder/{self.order.id}/', {
             'delivery_address': 'Новый адрес',
             'delivery_time': (timezone.now() + timezone.timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M'),
             'comment': 'Новый комментарий',
-            f'quantity_{self.product.id}': 2  # Указываем количество товара
+            f'quantity_{self.product.id}': 2
         })
         self.assertEqual(response.status_code, 302)
         new_order = Order.objects.latest('id')
@@ -73,3 +63,14 @@ class OrderTestCase(TestCase):
         self.assertEqual(new_order.items.count(), 1)
         self.assertEqual(new_order.items.first().product, self.product)
         self.assertEqual(new_order.items.first().quantity, 2)
+
+    @patch('bot.telegram.async_send_telegram_notification')
+    def test_update_order_status(self, mock_send_notification):
+        self.client.login(username='testuser', password='testpass')
+        response = self.client.post(f'/orders/update_status/{self.order.id}/', {
+            'status': 'in_progress'
+        })
+        self.assertEqual(response.status_code, 302)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'in_progress')
+        mock_send_notification.assert_called_once_with(self.order)

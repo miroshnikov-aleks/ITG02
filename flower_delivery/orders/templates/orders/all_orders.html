@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Заказы{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Заказы</h2>
+<div class="row">
+    {% for order in orders %}
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Заказ №{{ order.id }}</h5>
+                    <p class="card-text"><strong>Пользователь:</strong> {{ order.user.username }}</p>
+                    <p class="card-text"><strong>Адрес:</strong> {{ order.delivery_address }}</p>
+                    <p class="card-text"><strong>Дата доставки:</strong> {{ order.delivery_time }}</p>
+                    <p class="card-text"><strong>Дата создания:</strong> {{ order.created_at }}</p>
+                    <p class="card-text"><strong>Статус:</strong> {{ order.get_status_display }}</p>
+                    <p class="card-text"><strong>Товары:</strong></p>
+                    <ul>
+                        {% for item in order.items.all %}
+                            <li>{{ item.product.name }} - {{ item.quantity }} шт. - {{ item.price }} руб.</li>
+                        {% endfor %}
+                    </ul>
+                    <p class="card-text"><strong>Итого:</strong> {{ order.total_price }} руб.</p>
+                    <a href="{% url 'orders:order_detail' order.id %}" class="btn btn-primary">Подробнее</a>
+                    <a href="{% url 'orders:update_order_status' order.id %}" class="btn btn-secondary">Изменить статус</a>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="alert alert-warning" role="alert">
+            Заказов пока нет.
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
