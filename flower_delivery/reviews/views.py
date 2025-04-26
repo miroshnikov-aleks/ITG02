@@ -14,7 +14,7 @@ def review_create(request, product_id):
             review.product = product
             review.user = request.user
             review.save()
-            return redirect('catalog:product_detail', pk=product.pk)
+            return redirect('catalog:product_detail', pk=product.pk)  # Перенаправление после успешного сохранения
     else:
         form = ReviewForm()
     return render(request, 'reviews/review_form.html', {'form': form, 'product': product})
