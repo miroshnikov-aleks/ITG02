@@ -15,28 +15,33 @@ class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at']
     actions = ['mark_as_in_progress', 'mark_as_in_delivery', 'mark_as_completed', 'mark_as_canceled', 'delete_selected_orders']
 
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if change:
+            send_telegram_notification(obj, is_new_order=False)
+
     def mark_as_in_progress(self, request, queryset):
         queryset.update(status='in_progress')
         for order in queryset:
-            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
+            send_telegram_notification(order, is_new_order=False)  # Отправляем уведомление при изменении статуса
     mark_as_in_progress.short_description = "Отметить как в обработке"
 
     def mark_as_in_delivery(self, request, queryset):
         queryset.update(status='in_delivery')
         for order in queryset:
-            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
+            send_telegram_notification(order, is_new_order=False)  # Отправляем уведомление при изменении статуса
     mark_as_in_delivery.short_description = "Отметить как в доставке"
 
     def mark_as_completed(self, request, queryset):
         queryset.update(status='completed')
         for order in queryset:
-            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
+            send_telegram_notification(order, is_new_order=False)  # Отправляем уведомление при изменении статуса
     mark_as_completed.short_description = "Отметить как выполнен"
 
     def mark_as_canceled(self, request, queryset):
         queryset.update(status='canceled')
         for order in queryset:
-            send_telegram_notification(order)  # Отправляем уведомление при изменении статуса
+            send_telegram_notification(order, is_new_order=False)  # Отправляем уведомление при изменении статуса
     mark_as_canceled.short_description = "Отметить как отменен"
 
     def delete_selected_orders(self, request, queryset):
