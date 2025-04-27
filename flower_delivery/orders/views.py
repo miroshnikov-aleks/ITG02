@@ -45,7 +45,7 @@ def order_create(request):
                 return render(request, 'orders/order_create.html', {'form': form})
 
             update_daily_report(order)
-            send_telegram_notification(order)
+            send_telegram_notification(order, is_new_order=True)
             return redirect('orders:order_list')
     else:
         form = OrderForm(user=request.user)
@@ -72,7 +72,7 @@ def update_order_status(request, order_id):
         if new_status in dict(Order.STATUS_CHOICES):
             order.status = new_status
             order.save(update_fields=['status'])
-            send_telegram_notification(order)
+            send_telegram_notification(order, is_new_order=False)
             return redirect('orders:all_orders')
 
     return render(request, 'orders/update_order_status.html', {'order': order})
@@ -108,7 +108,7 @@ def reorder(request, order_id):
                 return render(request, 'orders/order_create.html', {'form': form, 'reorder': True})
 
             update_daily_report(new_order)
-            send_telegram_notification(new_order)
+            send_telegram_notification(new_order, is_new_order=True)
             return redirect('orders:order_list')
     else:
         initial_data = {
