@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Время работы{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0"><i class="bi bi-clock me-2"></i>Время работы</h3>
+                </div>
+                <div class="card-body text-center">
+                    <h4 class="mb-4">Извините, но в данный момент мы не принимаем заказы</h4>
+                    <p class="lead">Наш рабочий график: с {{ working_hours }}</p>
+                    <p>Вы можете вернуться в это время, чтобы оформить заказ.</p>
+                    <a href="{% url 'catalog:product_list' %}" class="btn btn-primary mt-3">
+                        <i class="bi bi-arrow-left me-2"></i>Вернуться в каталог
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

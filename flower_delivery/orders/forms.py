@@ -1,6 +1,9 @@
 from django import forms
 from .models import Order
 from catalog.models import Product
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+import pytz
 
 class OrderForm(forms.ModelForm):
     class Meta:
@@ -41,3 +44,20 @@ class OrderForm(forms.ModelForm):
                     label=product.name,
                     widget=forms.NumberInput(attrs={'class': 'form-control'})
                 )
+
+    def clean_delivery_time(self):
+        delivery_time = self.cleaned_data.get('delivery_time')
+        if delivery_time:
+            moscow_tz = pytz.timezone('Europe/Moscow')
+            delivery_time = timezone.localtime(delivery_time, moscow_tz)
+
+            # Проверяем рабочее время
+            if not (9 <= delivery_time.hour < 18):
+                raise ValidationError("Заказы принимаются только с 9:00 до 18:00")
+
+            # Проверяем, что время доставки не в прошлом
+            now = timezone.now()
+            if delivery_time < now:
+                raise ValidationError("Время доставки не может быть в прошлом")
+
+        return delivery_time

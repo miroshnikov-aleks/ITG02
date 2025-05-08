@@ -66,6 +66,7 @@ class AnalyticsTests(TestCase):
         formatted_date2 = date_format(self.report2.date, "d E Y")
         formatted_revenue1 = number_format(self.report1.total_revenue, use_l10n=True, decimal_pos=2)
         formatted_revenue2 = number_format(self.report2.total_revenue, use_l10n=True, decimal_pos=2)
+
         self.assertContains(response, formatted_date1)
         self.assertContains(response, f"{self.report1.order_count}")
         self.assertContains(response, f"{formatted_revenue1} ₽")

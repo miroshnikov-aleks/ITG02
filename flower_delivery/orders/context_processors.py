@@ -1,4 +1,3 @@
-# orders/context_processors.py
 from .models import Cart
 
 def cart(request):

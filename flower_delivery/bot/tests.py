@@ -58,7 +58,7 @@ class BotTestCase(TransactionTestCase):
     @patch('bot.telegram.async_send_telegram_notification', new_callable=AsyncMock)
     def test_send_telegram_notification(self, mock_async_send):
         send_telegram_notification(self.order)
-        mock_async_send.assert_called_once_with(self.order)
+        mock_async_send.assert_called_once_with(self.order, True)
 
     def tearDown(self):
         self.product.image.delete()

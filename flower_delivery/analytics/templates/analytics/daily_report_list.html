@@ -15,9 +15,9 @@
     <tbody>
         {% for report in reports %}
         <tr>
-            <td>{{ report.date }}</td>
+            <td>{{ report.date|date:"d E Y" }}</td>
             <td>{{ report.order_count }}</td>
-            <td>{{ report.total_revenue }} ₽</td>
+            <td>{{ report.total_revenue|floatformat:2 }} ₽</td>
         </tr>
         {% endfor %}
     </tbody>

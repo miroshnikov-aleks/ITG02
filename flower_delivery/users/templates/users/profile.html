@@ -8,8 +8,13 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0"><i class="bi bi-person-circle me-2"></i>Профиль</h3>
+                <div class="card-header bg-primary text-white d-flex align-items-center">
+                    {% if form.instance.avatar %}
+                        <img src="{{ form.instance.avatar.url }}" class="avatar-icon me-2" alt="Аватар">
+                    {% else %}
+                        <i class="bi bi-person-circle me-2"></i>
+                    {% endif %}
+                    <h3 class="mb-0">Профиль</h3>
                 </div>
                 <div class="card-body">
                     <form method="post" enctype="multipart/form-data">

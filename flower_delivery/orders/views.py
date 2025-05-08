@@ -9,6 +9,7 @@ from bot.telegram import send_telegram_notification
 from analytics.models import DailyReport
 from decimal import Decimal
 from django.http import HttpResponseForbidden
+import pytz
 
 def update_daily_report(order):
     today = timezone.now().date()
@@ -19,6 +20,16 @@ def update_daily_report(order):
 
 @login_required
 def order_create(request):
+    # Проверяем текущее время
+    moscow_tz = pytz.timezone('Europe/Moscow')
+    current_time = timezone.localtime(timezone.now(), moscow_tz)
+
+    # Если текущее время вне рабочих часов, показываем сообщение
+    if not (9 <= current_time.hour < 18):
+        return render(request, 'orders/outside_working_hours.html', {
+            'working_hours': '9:00 - 18:00'
+        })
+
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user)
         if form.is_valid():
@@ -27,6 +38,7 @@ def order_create(request):
             order.save()
 
             # Обрабатываем только товары с quantity > 0
+            items_added = False
             for field_name, value in form.cleaned_data.items():
                 if field_name.startswith('quantity_') and value > 0:
                     product_id = field_name.split('_')[1]
@@ -37,9 +49,10 @@ def order_create(request):
                         price=product.price,
                         quantity=value
                     )
+                    items_added = True
 
             # Проверяем, что в заказе есть товары
-            if order.items.count() == 0:
+            if not items_added:
                 order.delete()
                 form.add_error(None, "Выберите хотя бы один товар")
                 return render(request, 'orders/order_create.html', {'form': form})
@@ -80,6 +93,16 @@ def update_order_status(request, order_id):
 @login_required
 def reorder(request, order_id):
     original_order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # Проверяем текущее время
+    moscow_tz = pytz.timezone('Europe/Moscow')
+    current_time = timezone.localtime(timezone.now(), moscow_tz)
+
+    # Если текущее время вне рабочих часов, показываем сообщение
+    if not (9 <= current_time.hour < 18):
+        return render(request, 'orders/outside_working_hours.html', {
+            'working_hours': '9:00 - 18:00'
+        })
 
     if request.method == 'POST':
         form = OrderForm(request.POST, user=request.user, reorder_data=original_order)
