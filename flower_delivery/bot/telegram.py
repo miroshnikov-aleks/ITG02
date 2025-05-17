@@ -1,163 +1,186 @@
 import logging
 import asyncio
+from typing import List, Optional
 import pytz
-from aiogram import Bot, Dispatcher
+from aiogram import Bot
 from aiogram.enums import ParseMode
 from aiogram.types import FSInputFile
 from django.conf import settings
 from django.utils import timezone
 from asgiref.sync import sync_to_async
-from orders.models import OrderItem
+
+# Models
+from orders.models import Order, OrderItem
 from analytics.models import DailyReport
 
 logger = logging.getLogger(__name__)
 
 # Инициализация бота
-bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
-dp = Dispatcher()
+bot = Bot(token=settings.TELEGRAM_BOT_TOKEN, parse_mode=ParseMode.HTML)
+MOSCOW_TZ = pytz.timezone('Europe/Moscow')
 
-# ====== Асинхронные функции для уведомлений ======
-async def async_send_telegram_notification(order, is_new_order=True):
-    """
-    Асинхронная отправка уведомления в Telegram.
-    """
-    try:
-        if is_new_order:
-            message_text = await generate_new_order_message(order)
-        else:
-            message_text = await generate_status_change_message(order)
+# ====== Утилиты ======
+@sync_to_async
+def _get_order_details(order: Order) -> tuple:
+    """Получение деталей заказа из БД"""
+    items = list(OrderItem.objects.filter(order=order).select_related('product'))
+    return (
+        timezone.localtime(order.created_at, MOSCOW_TZ),
+        timezone.localtime(order.delivery_time, MOSCOW_TZ),
+        items
+    )
 
-        photo_paths = await get_all_product_images(order)
+@sync_to_async
+def _get_product_images(order: Order) -> List[str]:
+    """Получение путей к изображениям товаров"""
+    return [
+        item.product.image.path
+        for item in OrderItem.objects.filter(order=order).select_related('product')
+        if item.product.image
+    ]
 
-        # Отправка текстового сообщения
-        await bot.send_message(
-            chat_id=settings.TELEGRAM_CHAT_ID,
-            text=message_text,
-            parse_mode=ParseMode.HTML
+# ====== Форматирование сообщений ======
+async def _format_order_header(order: Order, is_new: bool) -> str:
+    created_at, delivery_time, _ = await _get_order_details(order)
+    if is_new:
+        return (
+            "🌸 *НОВЫЙ ЗАКАЗ ЦВЕТОВ* 🌸\n"
+            "📦 *Детали заказа:*\n"
+            f"🆔 *Номер:* {order.id}\n"
+            f"📅 *Дата:* {created_at.strftime('%d.%m.%Y %H:%M')}\n"
+            f"⏰ *Доставка:* {delivery_time.strftime('%d.%m.%Y %H:%M')}\n"
+            f"📍 *Адрес:* {order.delivery_address}\n"
+            f"💬 *Комментарий:* {order.comment or 'отсутствует'}\n"
+        )
+    else:
+        return (
+            "🌸 *ИЗМЕНЕНИЕ СТАТУСА ЗАКАЗА* 🌸\n"
+            "📦 *Детали заказа:*\n"
+            f"🆔 *Номер:* {order.id}\n"
+            f"📅 *Дата:* {created_at.strftime('%d.%m.%Y %H:%M')}\n"
+            f"⏰ *Доставка:* {delivery_time.strftime('%d.%m.%Y %H:%M')}\n"
+            f"📍 *Адрес:* {order.delivery_address}\n"
+            f"💬 *Комментарий:* {order.comment or 'отсутствует'}\n"
         )
 
-        # Отправка изображений
-        for photo_path in photo_paths:
-            try:
-                photo = FSInputFile(photo_path)
-                await bot.send_photo(
-                    chat_id=settings.TELEGRAM_CHAT_ID,
-                    photo=photo,
-                    caption=f"Изображение товара из заказа №{order.id}",
-                    parse_mode=ParseMode.HTML
-                )
-            except Exception as e:
-                logger.error(f"Ошибка при отправке изображения: {str(e)}")
+async def _format_order_items(order: Order) -> str:
+    _, _, items = await _get_order_details(order)
+    items_text = "\n".join(
+        f"➖ {item.product.name} ({item.quantity} шт.) - {item.price:.2f}₽"
+        for item in items
+    )
+    return f"*Состав заказа:*\n{items_text}\n"
+
+async def _format_order_footer(order: Order) -> str:
+    # Используем sync_to_async для доступа к свойству total_price
+    total_price = await sync_to_async(lambda: order.total_price)()
+    if order.status == 'new':
+        return (
+            f"💰 *ИТОГО:* {total_price:.2f}₽\n"
+            f"📦 *Статус заказа:* {order.get_status_display()}\n"
+        )
+    else:
+        return (
+            f"💰 *ИТОГО:* {total_price:.2f}₽\n"
+            f"📦 *Новый статус заказа:* {order.get_status_display()}\n"
+        )
+
+# ====== Основные функции ======
+async def _send_telegram_message(text: str) -> None:
+    """Отправка текстового сообщения"""
+    try:
+        await bot.send_message(
+            chat_id=settings.TELEGRAM_CHAT_ID,
+            text=text,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    except Exception as e:
+        logger.error(f"Ошибка отправки сообщения: {str(e)}", exc_info=True)
+
+async def _send_telegram_photo(image_path: str, caption: str = "") -> None:
+    """Отправка изображения"""
+    try:
+        photo = FSInputFile(image_path)
+        await bot.send_photo(
+            chat_id=settings.TELEGRAM_CHAT_ID,
+            photo=photo,
+            caption=caption,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    except Exception as e:
+        logger.error(f"Ошибка отправки изображения: {str(e)}", exc_info=True)
+
+# ====== Публичные методы ======
+async def handle_order_notification(order: Order, is_new: bool = True) -> None:
+    """Обработка уведомления о заказе"""
+    try:
+        header = await _format_order_header(order, is_new)
+        items = await _format_order_items(order)
+        footer = await _format_order_footer(order)
+        message = header + items + footer
+
+        await _send_telegram_message(message)
+
+        image_paths = await _get_product_images(order)
+        for path in image_paths:
+            await _send_telegram_photo(path, f"📸 Товар из заказа №{order.id}")
 
     except Exception as e:
-        logger.error(f"Ошибка при отправке уведомления в Telegram: {str(e)}", exc_info=True)
-        raise
+        logger.error(f"Ошибка обработки заказа {order.id}: {str(e)}", exc_info=True)
     finally:
         await bot.session.close()
 
-@sync_to_async
-def generate_new_order_message(order):
-    items = OrderItem.objects.filter(order=order).select_related('product')
-    moscow_tz = pytz.timezone('Europe/Moscow')
-    created_at = timezone.localtime(order.created_at, moscow_tz)
-    delivery_time = timezone.localtime(order.delivery_time, moscow_tz)
-
-    message = [
-        f"🌸 НОВЫЙ ЗАКАЗ ЦВЕТОВ 🌸",
-        f"📦 Детали заказа:",
-        f"🆔 Номер: {order.id}",
-        f"📅 Дата: {created_at.strftime('%d.%m.%Y %H:%M')}",
-        f"⏰ Доставка: {delivery_time.strftime('%d.%m.%Y %H:%M')}",
-        f"📍 Адрес: {order.delivery_address}",
-        f"💬 Комментарий: {order.comment or 'отсутствует'}",
-        f"Состав заказа:"
-    ]
-
-    for item in items:
-        message.append(f"➖ {item.product.name} ({item.quantity} шт.) - {item.price}₽")
-
-    message.append(f"\n💰 ИТОГО: {order.total_price}₽")
-    message.append(f"\n📦 Статус заказа: {order.get_status_display()}")
-
-    return '\n'.join(message)
-
-@sync_to_async
-def generate_status_change_message(order):
-    items = OrderItem.objects.filter(order=order).select_related('product')
-    moscow_tz = pytz.timezone('Europe/Moscow')
-    created_at = timezone.localtime(order.created_at, moscow_tz)
-    delivery_time = timezone.localtime(order.delivery_time, moscow_tz)
-
-    message = [
-        f"🌸 ИЗМЕНЕНИЕ СТАТУСА ЗАКАЗА 🌸",
-        f"📦 Детали заказа:",
-        f"🆔 Номер: {order.id}",
-        f"📅 Дата: {created_at.strftime('%d.%m.%Y %H:%M')}",
-        f"⏰ Доставка: {delivery_time.strftime('%d.%m.%Y %H:%M')}",
-        f"📍 Адрес: {order.delivery_address}",
-        f"💬 Комментарий: {order.comment or 'отсутствует'}",
-        f"Состав заказа:"
-    ]
-
-    for item in items:
-        message.append(f"➖ {item.product.name} ({item.quantity} шт.) - {item.price}₽")
-
-    message.append(f"\n💰 ИТОГО: {order.total_price}₽")
-    message.append(f"\n📦 Новый статус заказа: {order.get_status_display()}")
-
-    return '\n'.join(message)
-
-@sync_to_async
-def get_all_product_images(order):
-    items = OrderItem.objects.filter(order=order).select_related('product')
-    return [item.product.image.path for item in items if item.product.image]
-
-def send_telegram_notification(order, is_new_order=True):
-    """
-    Синхронная точка входа для Celery. Отправляет уведомление в Telegram.
-    """
+async def send_daily_report() -> None:
+    """Отправка ежедневного отчета"""
     try:
-        # Создаем новый цикл событий, если его нет
+        today = timezone.now().date()
+        report = await sync_to_async(DailyReport.objects.filter(date=today).first)()
+
+        if not report:
+            logger.warning("Отчет за сегодня не найден")
+            return
+
+        message = (
+            "📊 *Ежедневный отчет*\n"
+            f"📅 {report.date.strftime('%d %B %Y')}\n"
+            f"📦 Заказов: {report.order_count}\n"
+            f"💰 Выручка: {report.total_revenue:.2f}₽\n"
+        )
+
+        if report.order_count > 0:
+            avg = report.total_revenue / report.order_count
+            message += f"🏆 Средний чек: {avg:.2f}₽"
+
+        await _send_telegram_message(message)
+        logger.info("Ежедневный отчет успешно отправлен")
+
+    except Exception as e:
+        logger.error(f"Ошибка отправки ежедневного отчета: {str(e)}", exc_info=True)
+    finally:
+        await bot.session.close()
+
+# ====== Синхронные обертки для Celery ======
+def send_order_notification(order_pk: int, is_new: bool = True) -> None:
+    """Синхронная обертка для уведомлений"""
+    try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(async_send_telegram_notification(order, is_new_order))
-        loop.close()
+        order = Order.objects.get(pk=order_pk)
+        loop.run_until_complete(handle_order_notification(order, is_new))
+    except Order.DoesNotExist:
+        logger.error(f"Заказ с pk={order_pk} не найден")
     except Exception as e:
-        logger.error(f"Ошибка при отправке уведомления в Telegram: {str(e)}")
+        logger.error(f"Ошибка в задаче отправки уведомления: {str(e)}", exc_info=True)
+    finally:
+        loop.close()
 
-# ====== Ежедневный отчёт ======
-async def send_daily_report():
-    today = timezone.now().date()
-    report = await sync_to_async(DailyReport.objects.filter(date=today).first)()
-
-    if report:
-        message_text = f"📊 Ежедневный отчёт за {today}:\n"
-        message_text += f"📦 Количество заказов: {report.order_count}\n"
-        message_text += f"💰 Общая выручка: {report.total_revenue} ₽"
-
-        try:
-            await bot.send_message(
-                chat_id=settings.TELEGRAM_CHAT_ID,
-                text=message_text,
-                parse_mode=ParseMode.HTML
-            )
-            logger.info("✅ Ежедневный отчёт успешно отправлен в Telegram.")
-        except Exception as e:
-            logger.error(f"❌ Не удалось отправить ежедневный отчёт: {e}")
-    else:
-        logger.info("ℹ️ Нет данных для ежедневного отчёта за сегодня.")
-
-    await bot.session.close()
-
-def run_send_daily_report():
-    """
-    Точка входа для Celery задачи.
-    """
+def trigger_daily_report() -> None:
+    """Синхронная обертка для ежедневного отчета"""
     try:
-        # Создаем новый цикл событий, если его нет
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(send_daily_report())
-        loop.close()
     except Exception as e:
-        logger.error(f"Ошибка при выполнении задачи send_daily_report: {str(e)}")
+        logger.error(f"Ошибка в задаче ежедневного отчета: {str(e)}", exc_info=True)
+    finally:
+        loop.close()
