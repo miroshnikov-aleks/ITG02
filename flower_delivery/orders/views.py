@@ -5,7 +5,7 @@ from django.core.exceptions import PermissionDenied
 from .models import Order, OrderItem
 from catalog.models import Product
 from .forms import OrderForm
-from bot.telegram import send_order_notification  # Измененный импорт
+from bot.telegram import send_order_notification
 from analytics.models import DailyReport
 from decimal import Decimal
 from django.http import HttpResponseForbidden
@@ -36,15 +36,15 @@ def order_create(request):
             order.save()
 
             items_added = False
-            for field_name, value in form.cleaned_data.items():
-                if field_name.startswith('quantity_') and value > 0:
+            for field_name, value in request.POST.items():
+                if field_name.startswith('quantity_') and value.isdigit() and int(value) > 0:
                     product_id = field_name.split('_')[1]
                     product = Product.objects.get(id=product_id)
                     OrderItem.objects.create(
                         order=order,
                         product=product,
                         price=product.price,
-                        quantity=value
+                        quantity=int(value)
                     )
                     items_added = True
 
@@ -54,8 +54,10 @@ def order_create(request):
                 return render(request, 'orders/order_create.html', {'form': form})
 
             update_daily_report(order)
-            send_order_notification(order.pk, is_new=True)  # Обновленный вызов
+            send_order_notification(order.pk, is_new=True)
             return redirect('orders:order_list')
+        else:
+            print(f"Form errors: {form.errors}")
     else:
         form = OrderForm(user=request.user)
     return render(request, 'orders/order_create.html', {'form': form})
@@ -81,7 +83,7 @@ def update_order_status(request, order_id):
         if new_status in dict(Order.STATUS_CHOICES):
             order.status = new_status
             order.save(update_fields=['status'])
-            send_order_notification(order.pk, is_new=False)  # Обновленный вызов
+            send_order_notification(order.pk, is_new=False)
             return redirect('orders:all_orders')
 
     return render(request, 'orders/update_order_status.html', {'order': order})
@@ -105,15 +107,15 @@ def reorder(request, order_id):
             new_order.save()
 
             items_added = False
-            for field_name, value in form.cleaned_data.items():
-                if field_name.startswith('quantity_') and value > 0:
+            for field_name, value in request.POST.items():
+                if field_name.startswith('quantity_') and value.isdigit() and int(value) > 0:
                     product_id = field_name.split('_')[1]
                     product = Product.objects.get(id=product_id)
                     OrderItem.objects.create(
                         order=new_order,
                         product=product,
                         price=product.price,
-                        quantity=value
+                        quantity=int(value)
                     )
                     items_added = True
 
@@ -123,7 +125,7 @@ def reorder(request, order_id):
                 return render(request, 'orders/order_create.html', {'form': form, 'reorder': True})
 
             update_daily_report(new_order)
-            send_order_notification(new_order.pk, is_new=True)  # Обновленный вызов
+            send_order_notification(new_order.pk, is_new=True)
             return redirect('orders:order_list')
     else:
         initial_data = {

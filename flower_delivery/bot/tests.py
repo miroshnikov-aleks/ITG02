@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from orders.models import Order, OrderItem
 from catalog.models import Product
-from bot.telegram import async_send_telegram_notification, send_telegram_notification
+from bot.telegram import handle_order_notification, send_order_notification
 import asyncio
 from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -46,18 +46,18 @@ class BotTestCase(TransactionTestCase):
 
     @patch('bot.telegram.bot.send_message', new_callable=AsyncMock)
     @patch('bot.telegram.bot.send_photo', new_callable=AsyncMock)
-    def test_async_send_telegram_notification(self, mock_send_photo, mock_send_message):
+    def test_handle_order_notification(self, mock_send_photo, mock_send_message):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(async_send_telegram_notification(self.order))
+        loop.run_until_complete(handle_order_notification(self.order))
         loop.close()
 
         mock_send_message.assert_called_once()
         mock_send_photo.assert_called_once()
 
-    @patch('bot.telegram.async_send_telegram_notification', new_callable=AsyncMock)
-    def test_send_telegram_notification(self, mock_async_send):
-        send_telegram_notification(self.order)
+    @patch('bot.telegram.handle_order_notification', new_callable=AsyncMock)
+    def test_send_order_notification(self, mock_async_send):
+        send_order_notification(self.order.pk)
         mock_async_send.assert_called_once_with(self.order, True)
 
     def tearDown(self):
