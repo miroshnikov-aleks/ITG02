@@ -43,7 +43,10 @@
 ```bash
 git clone https://github.com/Aleksandr-unecha/ITG02
 cd flower-delivery
+```
 
 ## Установка зависимостей
+
 ```bash
 pip install -r requirements.txt
+```
